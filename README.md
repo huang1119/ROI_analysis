@@ -9,15 +9,23 @@ MVP 聚焦 **巨量千川（抖音电商）的 ROAS 异常诊断**：确定性�
 ## 功能一览
 
 - 💬 **对话式诊断**：像聊天一样问「为什么美妆旗舰店的 ROI 下降了」，agent 理解意图、跑诊断、回复大白话报告（支持追问、打字机输出、Markdown 渲染）
-- <img width="953" height="629" alt="image" src="https://github.com/user-attachments/assets/65ad5c13-4583-4790-ac88-0a748fb19e10" />
+  <img width="953" height="629" alt="image" src="https://github.com/user-attachments/assets/65ad5c13-4583-4790-ac88-0a748fb19e10" />
 
 - 📊 **结构化诊断**：漏斗偏离图、根因打分、素材下钻，定位到具体素材
+  <img width="884" height="643" alt="image" src="https://github.com/user-attachments/assets/c3c46d5d-3adf-432d-8b5c-bd262afade26" />
+
 - 🔍 **全账户扫描**：一键扫所有账户，挑出异常账户
-- 🧠 **可配置 Skill 知识库**：教 agent「什么情况下调哪个工具」，可导入/编辑自己的策略
+- 🧠 **可配置知识库**：教 agent「什么情况下调哪个策略」，可导入/编辑自己的策略
+  <img width="727" height="501" alt="image" src="https://github.com/user-attachments/assets/c4f519b7-311f-44af-9cf7-2810eb924768" />
+
 - 🏪 **账户管理**：一个数据源（一套 API 凭据）下管理多个店铺账户
 - 🔌 **真实 API 入口**：巨量千川 Marketing API 客户端 + 数据源切换 + 测试连接
+- <img width="668" height="647" alt="image" src="https://github.com/user-attachments/assets/bb691a04-cf26-43bc-855a-ad8690ec9f93" />
+
 - 📄 **报告导出**：PDF（含图表）/ Markdown，导出目录可自定义
 - ⏰ **定时告警推送**：可配置扫描间隔，多群（飞书/钉钉/企微）推送
+ <img width="1052" height="646" alt="image" src="https://github.com/user-attachments/assets/ac727b8b-b576-4bf4-a857-f808e90bc248" />
+
 
 ## 项目架构设计
 
