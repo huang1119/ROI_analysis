@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>电商广告 ROI 异常诊断</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/echarts.min.js"></script>
+  <script src="/static/marked.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">📊 电商广告 ROI 异常诊断</div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="chat">对话</button>
+      <button class="tab" data-tab="diagnose">诊断</button>
+      <button class="tab" data-tab="scan">扫描</button>
+      <button class="tab" data-tab="config">配置</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- 对话页 -->
+    <section id="tab-chat" class="panel active">
+      <div class="chat-layout">
+        <aside class="chat-sidebar">
+          <button id="btn-new-chat" class="btn">＋ 新对话</button>
+          <div id="session-list" class="session-list"></div>
+        </aside>
+        <div class="chat-main">
+          <div id="chat-history" class="chat-history"></div>
+          <div class="chat-input-row">
+            <input id="chat-input" class="control" type="text"
+                   placeholder="问点什么，例如：为什么美妆旗舰店的ROI下降了？">
+            <button id="btn-send" class="btn btn-primary">发送</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 诊断页 -->
+    <section id="tab-diagnose" class="panel">
+      <div class="toolbar">
+        <select id="account-select" class="control"></select>
+        <button id="btn-diagnose" class="btn btn-primary">开始诊断</button>
+        <span class="hint">近 7 天 vs 前 21 天基线</span>
+      </div>
+      <div id="diagnose-empty" class="card">
+        <h3>诊断账户的 ROI 异常</h3>
+        <p class="hint">选择一个账户，我会对比它近 7 天与前 21 天的数据，定位 ROI 掉在哪一环、为什么、怎么调。</p>
+        <div id="account-shortcuts" class="account-shortcuts"></div>
+      </div>
+      <div id="diagnose-loading" class="loading hidden">诊断中…</div>
+      <div id="diagnose-result" class="hidden">
+        <div id="conclusion" class="conclusion"></div>
+        <div class="grid">
+          <div class="card">
+            <h3>漏斗偏离（z-score）</h3>
+            <div id="funnel-chart" class="chart"></div>
+          </div>
+          <div class="card">
+            <h3>根因打分</h3>
+            <div id="scores-chart" class="chart"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>素材下钻（主要贡献者）</h3>
+          <div id="drilldowns"></div>
+        </div>
+        <div class="card">
+          <h3>诊断报告</h3>
+          <div id="report-text" class="report"></div>
+        </div>
+      </div>
+
+      <div class="card form-card">
+        <h3>导出报告</h3>
+        <label>导出目录（绝对路径，如 D:\reports）</label>
+        <input id="export-dir" class="control" type="text" placeholder="D:\reports">
+        <div class="btn-row">
+          <button id="btn-export" class="btn btn-primary">导出最近一次报告</button>
+        </div>
+        <span id="export-msg" class="msg"></span>
+      </div>
+    </section>
+
+    <!-- 扫描页 -->
+    <section id="tab-scan" class="panel">
+      <div class="toolbar">
+        <button id="btn-scan" class="btn btn-primary">开始扫描全部账户</button>
+        <span id="scan-summary" class="hint"></span>
+      </div>
+      <div id="scan-empty" class="card">
+        <h3>扫描全部账户</h3>
+        <p class="hint">一次性检查所有账户的 ROI，挑出异常账户并给出根因与建议。</p>
+        <p id="scan-account-count" class="hint"></p>
+      </div>
+      <div id="scan-loading" class="loading hidden">扫描中…</div>
+      <div id="scan-result"></div>
+    </section>
+
+    <!-- 配置页 -->
+    <section id="tab-config" class="panel">
+      <div class="sub-tabs">
+        <button class="subtab active" data-subtab="datasource">数据源</button>
+        <button class="subtab" data-subtab="accounts">账户</button>
+        <button class="subtab" data-subtab="llm">模型</button>
+        <button class="subtab" data-subtab="skills">技能</button>
+        <button class="subtab" data-subtab="alert">告警</button>
+      </div>
+      <div id="config-datasource" class="subpanel active">
+      <div class="card form-card">
+        <h3>数据源配置</h3>
+        <label>电商平台</label>
+        <select id="ds-platform" class="control">
+          <option value="巨量千川">巨量千川（抖音电商）</option>
+          <option value="电商罗盘" disabled>电商罗盘（二期）</option>
+        </select>
+        <label>数据来源模式</label>
+        <select id="ds-mode" class="control">
+          <option value="合成数据（演示）">合成数据（演示）</option>
+          <option value="真实 API">真实 API（巨量千川）</option>
+        </select>
+
+        <div id="ds-synthetic">
+          <label>数据文件路径（Parquet）</label>
+          <input id="ds-file" class="control" type="text" placeholder="data/synthetic_daily.parquet">
+        </div>
+
+        <div id="ds-api" class="hidden">
+          <label>App ID</label>
+          <input id="api-appid" class="control" type="text" placeholder="巨量引擎开放平台应用 ID">
+          <label>Secret</label>
+          <input id="api-secret" class="control" type="password">
+          <label>Access Token</label>
+          <input id="api-token" class="control" type="password" placeholder="广告主授权后的 access_token">
+          <label>Refresh Token（可选）</label>
+          <input id="api-refresh" class="control" type="password">
+          <label>Base URL</label>
+          <input id="api-baseurl" class="control" type="text" placeholder="https://ad.oceanengine.com">
+          <label>拉取最近天数</label>
+          <input id="api-days" class="control" type="number" min="1" value="60">
+          <button id="btn-test-api" class="btn">测试连接</button>
+          <span id="api-msg" class="msg"></span>
+        </div>
+
+        <div class="btn-row">
+          <button id="btn-save-ds" class="btn btn-primary">保存</button>
+        </div>
+        <span id="ds-msg" class="msg"></span>
+      </div>
+      </div>
+      <div id="config-accounts" class="subpanel">
+        <div class="card form-card">
+          <h3>账户管理</h3>
+          <p class="hint" style="margin-bottom:12px">
+            每个账户 = 一个电商店铺/广告主。真实 API 模式会拉取这些账户的数据；合成数据模式只有演示账户有数据。
+          </p>
+          <div id="accounts-list"></div>
+          <div class="btn-row">
+            <button id="btn-add-account" class="btn">新增账户</button>
+            <button id="btn-save-accounts" class="btn btn-primary">保存</button>
+          </div>
+          <span id="accounts-msg" class="msg"></span>
+        </div>
+      </div>
+      <div id="config-llm" class="subpanel">
+      <div class="card form-card">
+        <h3>模型配置</h3>
+        <label>服务商</label>
+        <select id="llm-provider" class="control">
+          <option value="deepseek">DeepSeek</option>
+          <option value="qwen">通义千问（阿里云百炼）</option>
+        </select>
+        <label>API Key</label>
+        <input id="llm-key" class="control" type="password" placeholder="sk-...">
+        <label>模型名（留空用默认）</label>
+        <input id="llm-model" class="control" type="text" placeholder="deepseek-chat / qwen-plus">
+        <label>Base URL（留空用默认）</label>
+        <input id="llm-baseurl" class="control" type="text" placeholder="https://...">
+        <div class="btn-row">
+          <button id="btn-save-llm" class="btn btn-primary">保存</button>
+          <button id="btn-test-llm" class="btn">测试连接</button>
+        </div>
+        <span id="llm-msg" class="msg"></span>
+      </div>
+      </div>
+      <div id="config-skills" class="subpanel">
+      <div class="toolbar">
+        <button id="btn-add-skill" class="btn">新增技能</button>
+        <button id="btn-save-skills" class="btn btn-primary">保存全部</button>
+        <button id="btn-reset-skills" class="btn">重置为默认</button>
+        <button id="btn-import-skills" class="btn">导入JSON</button>
+        <button id="btn-export-skills" class="btn">导出JSON</button>
+        <span id="skills-msg" class="msg"></span>
+      </div>
+      <p class="hint" style="margin-bottom:12px">
+        技能教 agent「什么情况下调哪个工具」。每个技能：触发条件（when）→ 调用工具（tool）→ 证实/排除条件。
+      </p>
+      <div id="skills-list"></div>
+      <div id="import-box" class="card hidden">
+        <h3>导入 / 导出 JSON</h3>
+        <textarea id="skills-json" class="control" rows="12"
+          placeholder='[{"name":"...","root_cause_id":"...","when":"...","tool":"...","tool_description":"...","confirm_if":"...","reject_if":"..."}]'></textarea>
+        <div class="btn-row">
+          <button id="btn-do-import" class="btn btn-primary">确认导入</button>
+          <button id="btn-cancel-import" class="btn">关闭</button>
+        </div>
+      </div>
+      </div>
+      <div id="config-alert" class="subpanel">
+        <div class="card form-card">
+          <h3>告警推送</h3>
+          <p class="hint" style="margin-bottom:12px">检测到 ROI 异常时，推送到下面配置的群（可多个，每个群一个 webhook）。</p>
+          <label>扫描间隔（定时扫描 + 推送）</label>
+          <select id="alert-interval" class="control">
+            <option value="0">关闭定时扫描</option>
+            <option value="1">每小时</option>
+            <option value="6">每 6 小时</option>
+            <option value="24">每天</option>
+            <option value="72">每 3 天</option>
+            <option value="168">每 7 天</option>
+          </select>
+
+          <label>推送目标（群）</label>
+          <div id="alert-targets"></div>
+
+          <div class="btn-row">
+            <button id="btn-add-target" class="btn">新增推送目标</button>
+            <button id="btn-save-alert" class="btn btn-primary">保存</button>
+          </div>
+          <span id="alert-msg" class="msg"></span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

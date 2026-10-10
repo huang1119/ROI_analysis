@@ -1,0 +1,8 @@
+pandas>=2.0
+numpy>=1.26
+pyarrow>=14.0
+duckdb>=0.10
+fastapi>=0.110
+uvicorn>=0.29
+reportlab>=4.0
+apscheduler>=3.10

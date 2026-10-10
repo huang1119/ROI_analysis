@@ -1,0 +1,45 @@
+INFO:     Started server process [32288]
+INFO:     Waiting for application startup.
+[定时扫描] 已关闭
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:54830 - "GET /api/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54831 - "PUT /api/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54832 - "GET /api/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54833 - "PUT /api/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54834 - "GET /api/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55807 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55807 - "GET /static/style.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61245 - "GET /static/echarts.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51576 - "GET /static/marked.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55029 - "GET /static/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51576 - "GET /api/config/export HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61245 - "GET /api/accounts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55029 - "GET /api/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55029 - "PUT /api/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55029 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55029 - "GET /api/config/datasource HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55029 - "GET /api/accounts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55029 - "GET /api/config/llm HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55029 - "GET /api/skills HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55029 - "GET /api/config/alert HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49634 - "GET /static/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49635 - "GET /static/style.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64993 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64993 - "GET /static/style.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50218 - "GET /static/echarts.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51993 - "GET /static/marked.min.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56070 - "GET /static/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50218 - "GET /api/accounts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56070 - "GET /api/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51993 - "GET /api/config/export HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51993 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49382 - "PUT /api/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49382 - "PUT /api/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49536 - "PUT /api/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61499 - "PUT /api/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60671 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60671 - "PUT /api/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49817 - "PUT /api/sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49817 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49817 - "PUT /api/sessions HTTP/1.1" 200 OK

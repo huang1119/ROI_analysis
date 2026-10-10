@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# 虚拟环境
+.venv/
+venv/
+
+# 生成的数据
+data/
+*.parquet
+exports/
+
+# 密钥与运行时数据（绝不上传）
+.env
+config/settings.json
+config/sessions.json
+
+# 测试产物
+.coverage
+.pytest_cache/
+htmlcov/
