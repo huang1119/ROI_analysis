@@ -24,7 +24,7 @@ MVP 聚焦 **巨量千川（抖音电商）的 ROAS 异常诊断**：确定性�
 
 - 📄 **报告导出**：PDF（含图表）/ Markdown，导出目录可自定义
 - ⏰ **定时告警推送**：可配置扫描间隔，多群（飞书/钉钉/企微）推送
- <img width="900" height="600" alt="定时报警推送" src="https://github.com/user-attachments/assets/ac727b8b-b576-4bf4-a857-f808e90bc248" />
+  <img width="900" height="600" alt="定时报警推送" src="https://github.com/user-attachments/assets/ac727b8b-b576-4bf4-a857-f808e90bc248" />
 
 
 ## 项目架构设计
