@@ -40,6 +40,25 @@ DEFAULTS = {
         "interval_hours": 0,   # 定时扫描间隔（小时），0 = 关闭
         "targets": [],         # 推送目标列表 [{name, channel, webhook_url, enabled}]
     },
+    "langfuse": {
+        "enabled": False,                       # 开启后把 trace 发到 Langfuse
+        "public_key": "",
+        "secret_key": "",
+        "host": "https://cloud.langfuse.com",  # Langfuse Cloud EU（SDK 默认）
+    },
+    "eval": {
+        "token": "",   # （已废弃，改用登录+角色）兼容保留
+    },
+    "router": {
+        "llm_fallback": True,   # 关键词路由落空时，用 LLM 二次判断意图（多一次调用）
+    },
+    "auth": {
+        "enabled": True,          # 开启登录鉴权
+        "secret": "",            # 会话签名密钥；空则用环境变量 AUTH_SECRET 或内置默认
+        "session_hours": 24,
+        # 用户列表：[{username, password_hash, role}]；空则回退内置 admin/admin123
+        "users": [],
+    },
 }
 
 
@@ -55,6 +74,10 @@ def load_settings() -> dict:
     for section in merged:
         if isinstance(data.get(section), dict):
             merged[section].update(data[section])
+    # 保留 DEFAULTS 之外的键（如 topics 词表）
+    for k, v in data.items():
+        if k not in merged:
+            merged[k] = v
     return merged
 
 

@@ -15,8 +15,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ACCOUNTS_PATH = PROJECT_ROOT / "config" / "accounts.json"
 
 DEFAULT_ACCOUNTS = [
-    {"advertiser_id": "A001", "advertiser_name": "美妆旗舰店"},
-    {"advertiser_id": "A002", "advertiser_name": "服饰旗舰店"},
+    {"advertiser_id": "A001", "advertiser_name": "美妆旗舰店", "aliases": ["美妆店"]},
+    {"advertiser_id": "A002", "advertiser_name": "服饰旗舰店", "aliases": ["服饰店"]},
 ]
 
 

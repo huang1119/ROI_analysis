@@ -21,3 +21,8 @@ config/sessions.json
 .coverage
 .pytest_cache/
 htmlcov/
+
+# 运行时日志与进程文件
+web.log
+web.pid
+*.log

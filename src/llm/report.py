@@ -9,6 +9,7 @@ from __future__ import annotations
 import pandas as pd
 
 from ..diagnosis.root_causes import ROOT_CAUSE_BY_ID
+from ..observability import record_fallback
 from ..skills import load_skills
 from .agent import run_agent
 from .client import available, chat
@@ -127,6 +128,7 @@ def generate_report(result: dict, df: pd.DataFrame, top_n: int = 3) -> str:
     candidate_ids = candidates["id"].tolist()
 
     if not available():
+        record_fallback("template_report")
         supplementary = fetch_supplementary(df, result["account_id"], candidate_ids, result["drilldowns"])
         return _template_report(result, candidates, supplementary)
 

@@ -13,10 +13,15 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Windows 控制台默认 GBK，无法打印 LLM 返回的 emoji（如 ✅）
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 import pandas as pd  # noqa: E402
 
 from src.diagnosis.engine import diagnose  # noqa: E402
 from src.llm.report import generate_report  # noqa: E402
+from src.observability import flush, shutdown, trace  # noqa: E402
 
 
 def find_account(df: pd.DataFrame, question: str) -> str | None:
@@ -43,15 +48,24 @@ def main() -> None:
     df = pd.read_parquet(data_path)
 
     account_id = find_account(df, question)
+
     if account_id is None:
         accounts = df[["advertiser_id", "advertiser_name"]].drop_duplicates()
+        with trace("cli.ask", input={"question": question}, user_id="local") as t:
+            t.update(metadata={"route": "list_accounts"})
+        flush()
+        shutdown()
         print("未识别到账户，可用账户：")
         print(accounts.to_string(index=False))
         return
 
     print(f"正在诊断：{question}\n")
-    result = diagnose(df, account_id)
-    report = generate_report(result, df)
+    with trace("cli.ask", input={"question": question}, user_id="local") as t:
+        result = diagnose(df, account_id)
+        report = generate_report(result, df)
+        t.update(output={"report": report}, metadata={"route": "diagnose", "account_id": account_id})
+    flush()
+    shutdown()
     print(report)
 
 

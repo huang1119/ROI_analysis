@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>投放诊断 · 登录</title>
+<style>
+  :root{
+    --ink:#1C1B18;        /* 墨 */
+    --ink-soft:#6E6A62;   /* 淡墨 */
+    --paper:#F5F3EE;      /* 账本纸 */
+    --sheet:#FBFAF7;      /* 单据（比纸略亮） */
+    --rule:#E2DED3;       /* 发丝线 */
+    --rule-soft:#E9E4D9;  /* 台账横线 */
+    --seal:#B43A2A;       /* 朱砂：印章 / 主操作 */
+    --serif:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun",serif;
+    --sans:"PingFang SC","HarmonyOS Sans SC","MiSans","Microsoft YaHei","Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:var(--sans);
+    color:var(--ink);
+    background-color:var(--paper);
+    background-image:repeating-linear-gradient(to bottom,transparent 0 27px,var(--rule-soft) 27px 28px);
+    display:grid;place-items:center;
+    min-height:100dvh;
+    padding:32px 20px;
+  }
+
+  .sheet{
+    position:relative;
+    width:100%;max-width:396px;min-width:0;
+    overflow-wrap:anywhere;
+    background:var(--sheet);
+    border:1px solid var(--rule);
+    box-shadow:9px 9px 0 rgba(28,27,24,.10);
+    padding:34px 30px 26px;
+  }
+
+  /* 印章——整页唯一的彩色记忆点 */
+  .seal{
+    position:absolute;top:20px;right:20px;
+    width:54px;height:54px;border:2.5px solid var(--seal);border-radius:4px;
+    color:var(--seal);font-family:var(--serif);font-size:17px;font-weight:700;
+    line-height:1.02;letter-spacing:1px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    transform:rotate(7deg);opacity:.84;
+  }
+
+  h1{
+    font-family:var(--serif);font-size:29px;font-weight:700;
+    letter-spacing:.08em;margin:0;
+  }
+  .sub{
+    margin:7px 0 0;font-size:11.5px;letter-spacing:.16em;color:var(--ink-soft);
+  }
+
+  .lead{
+    font-family:var(--serif);font-size:15.5px;line-height:1.75;margin:22px 0 18px;
+    padding-bottom:18px;border-bottom:1px solid var(--rule-soft);
+  }
+
+  .toggle{display:flex;gap:24px;margin-bottom:14px;}
+  .toggle button{
+    background:none;border:0;padding:0 0 6px;font:inherit;font-size:14px;
+    color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;
+  }
+  .toggle button.is-on{color:var(--ink);font-weight:600;border-bottom-color:var(--seal);}
+
+  .field{
+    display:grid;grid-template-columns:54px 1fr;align-items:center;gap:10px;
+    padding:9px 0;border-bottom:1px solid var(--rule-soft);
+  }
+  .field span{font-size:13px;color:var(--ink-soft);}
+  .field input{
+    border:0;background:transparent;font:inherit;font-size:15px;color:var(--ink);
+    padding:2px 0;width:100%;
+  }
+  .field input:focus{outline:none;}
+  .field:focus-within{border-bottom-color:var(--ink);}
+  .field[hidden]{display:none;}
+
+  .submit{
+    width:100%;margin-top:22px;padding:12px;border:0;border-radius:3px;
+    background:var(--seal);color:#F7F5EF;font:inherit;font-size:15px;font-weight:600;
+    letter-spacing:.1em;cursor:pointer;
+  }
+  .submit:hover{background:#9A2F22;}
+  .submit:disabled{opacity:.55;cursor:default;}
+
+  .msg{min-height:18px;margin:12px 0 0;font-size:13px;color:var(--seal);}
+
+  .note{
+    margin-top:18px;padding-top:14px;border-top:1px dashed var(--rule);
+    font-size:11.5px;line-height:1.75;color:var(--ink-soft);
+  }
+  .note code{color:var(--ink);border-bottom:1px dotted var(--rule);}
+
+  :focus-visible{outline:2px solid var(--seal);outline-offset:2px;}
+
+  @media (max-width:420px){
+    .sheet{padding:28px 22px 22px;}
+    .seal{width:48px;height:48px;font-size:15px;}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .sheet{animation:lift .5s cubic-bezier(.2,.7,.2,1) both;}
+    @keyframes lift{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  }
+</style>
+</head>
+<body>
+<main class="sheet">
+  <div class="seal" aria-hidden="true"><span>诊</span><span>断</span></div>
+
+  <h1>投放诊断</h1>
+  <p class="sub">抖音电商平台的 ROI 异常排查</p>
+
+  <p class="lead">ROI 掉了，先别急着改出价。<br>查数据、定位漏斗、给出可执行的建议。</p>
+
+  <div class="toggle" role="tablist">
+    <button type="button" id="tab-login" class="is-on" role="tab" aria-selected="true">登录</button>
+    <button type="button" id="tab-register" role="tab" aria-selected="false">注册</button>
+  </div>
+
+  <form id="form" novalidate>
+    <label class="field"><span>账号</span>
+      <input id="username" name="username" autocomplete="username" maxlength="20" autofocus></label>
+    <label class="field"><span>密码</span>
+      <input id="password" name="password" type="password" autocomplete="current-password"></label>
+    <label class="field" id="confirm-field" hidden><span>确认</span>
+      <input id="confirm" type="password" autocomplete="new-password"></label>
+
+    <button class="submit" id="btn" type="submit">进入投放台</button>
+    <p class="msg" id="msg" role="alert"></p>
+  </form>
+
+  <p class="note">首次使用可登录默认管理员 <code>admin</code> / <code>admin123</code>。<br>
+     新注册账号为普通角色，只能进投放台；评测看板需开发者角色。</p>
+</main>
+
+<script>
+const params = new URLSearchParams(location.search);
+const next = params.get("next") || "/";
+let mode = "login";
+
+const $ = (id) => document.getElementById(id);
+
+// 已登录直接进入
+fetch("/api/auth/me").then(r => { if (r.ok) location.href = next; }).catch(() => {});
+
+function setMode(m) {
+  mode = m;
+  const reg = m === "register";
+  $("tab-login").classList.toggle("is-on", !reg);
+  $("tab-register").classList.toggle("is-on", reg);
+  $("tab-login").setAttribute("aria-selected", String(!reg));
+  $("tab-register").setAttribute("aria-selected", String(reg));
+  $("confirm-field").hidden = !reg;
+  $("password").setAttribute("autocomplete", reg ? "new-password" : "current-password");
+  $("btn").textContent = reg ? "创建账号" : "进入投放台";
+  $("msg").textContent = "";
+}
+
+$("tab-login").addEventListener("click", () => setMode("login"));
+$("tab-register").addEventListener("click", () => setMode("register"));
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = $("msg");
+  const btn = $("btn");
+  const username = $("username").value.trim();
+  const password = $("password").value;
+
+  msg.textContent = "";
+  if (!username || !password) { msg.textContent = "请填写账号和密码。"; return; }
+  if (mode === "register") {
+    if (password.length < 6) { msg.textContent = "密码至少 6 位。"; return; }
+    if (password !== $("confirm").value) { msg.textContent = "两次输入的密码不一致。"; return; }
+  }
+
+  btn.disabled = true;
+  btn.textContent = mode === "register" ? "创建中…" : "登录中…";
+  try {
+    const res = await fetch("/api/auth/" + (mode === "register" ? "register" : "login"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.detail || "请求失败，请重试。");
+    }
+    location.href = next;
+  } catch (err) {
+    msg.textContent = err.message;
+    btn.disabled = false;
+    btn.textContent = mode === "register" ? "创建账号" : "进入投放台";
+  }
+});
+</script>
+</body>
+</html>

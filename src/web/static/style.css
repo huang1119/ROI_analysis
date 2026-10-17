@@ -52,13 +52,23 @@ table, .num, .conclusion, .bubble, .report { font-variant-numeric: tabular-nums;
   align-items: center;
   gap: 10px;
 }
-.brand::before {
-  content: "";
-  width: 10px;
-  height: 10px;
-  background: var(--cinnabar);
-  border-radius: 1px;
-  box-shadow: 10px 0 0 -3px var(--cinnabar), 10px 0 0 0 var(--pine);
+/* 朱砂印章：品牌位 / 评测看板共用 */
+.seal-sm {
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--cinnabar);
+  border-radius: 3px;
+  color: var(--cinnabar);
+  font-family: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.02;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-6deg);
+  flex-shrink: 0;
 }
 
 .tabs { display: flex; gap: 2px; }
@@ -134,6 +144,8 @@ table, .num, .conclusion, .bubble, .report { font-variant-numeric: tabular-nums;
 .msg { margin-left: 12px; font-size: 13px; }
 .msg.ok { color: var(--pine); }
 .msg.err { color: var(--cinnabar); }
+.ok-mark { color: var(--pine); }
+.ok-mark::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 7px; background: var(--pine); vertical-align: 1px; }
 
 .loading { padding: 24px; color: var(--muted); }
 .hidden { display: none; }
@@ -233,8 +245,14 @@ td.down { color: var(--pine); font-weight: 600; }
 .skill-card .control { width: 100%; }
 .skill-head { display: flex; gap: 10px; align-items: center; margin-bottom: 4px; }
 .skill-head .control { flex: 1; font-weight: 600; }
-.account-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
-.account-row .control { flex: 1; min-width: 0; }
+.account-row {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+.account-row .control { min-width: 0; width: 100%; }
 .alert-target { border: 1px solid var(--line); padding: 12px; border-radius: var(--radius); margin-bottom: 10px; }
 .alert-target-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; flex-wrap: wrap; }
 .alert-target-row .control { flex: 1; min-width: 0; }
@@ -252,7 +270,79 @@ td.down { color: var(--pine); font-weight: 600; }
   border-right: 1px solid var(--line);
   padding-right: 14px;
 }
-.session-list { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
+.session-list { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex: 1; min-height: 0; }
+
+/* 左下角账号入口（参 DeepSeek） */
+.account-dock { position: relative; margin-top: auto; }
+.account-btn {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  padding: 8px 10px; cursor: pointer; font-family: var(--font-sans); text-align: left;
+}
+.account-btn:hover { border-color: var(--muted); }
+.account-avatar {
+  width: 28px; height: 28px; flex-shrink: 0; background: var(--cinnabar); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700;
+}
+.account-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.account-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.account-role { font-size: 11px; color: var(--muted); }
+.account-caret { color: var(--muted); }
+.account-menu {
+  position: absolute; left: 0; right: 0; bottom: calc(100% + 6px);
+  background: var(--card); border: 1px solid var(--line);
+  box-shadow: 0 6px 18px rgba(28, 27, 24, 0.12);
+  display: flex; flex-direction: column; z-index: 30;
+}
+.account-menu[hidden] { display: none; }
+.account-menu-item {
+  display: block; width: 100%; text-align: left; padding: 9px 12px; border: 0;
+  background: none; font: inherit; font-size: 13px; color: var(--ink);
+  cursor: pointer; text-decoration: none;
+}
+.account-menu-item:hover { background: var(--indigo-soft); }
+.account-menu-item.danger { color: var(--cinnabar); }
+.account-menu-item.hidden { display: none; }
+
+/* 账号管理弹窗 */
+.modal-mask {
+  position: fixed; inset: 0; background: rgba(28, 27, 24, 0.42);
+  display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px;
+}
+.modal-mask[hidden] { display: none; }
+.modal {
+  width: 100%; max-width: 440px; background: var(--paper); border: 1px solid var(--line);
+  box-shadow: 10px 10px 0 rgba(28, 27, 24, 0.12); max-height: 86vh;
+  display: flex; flex-direction: column;
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 15px 20px; border-bottom: 1px solid var(--line);
+}
+.modal-head h2 { font-size: 15px; font-weight: 700; letter-spacing: 0.06em; }
+.modal-x { border: 0; background: none; font-size: 22px; line-height: 1; color: var(--muted); cursor: pointer; padding: 0 4px; }
+.modal-x:hover { color: var(--ink); }
+.modal-body { padding: 6px 20px 20px; overflow-y: auto; }
+
+.acct-row { display: flex; align-items: center; gap: 12px; padding: 14px 2px; border-bottom: 1px solid var(--line); }
+.acct-label { font-size: 13px; color: var(--muted); width: 64px; flex-shrink: 0; }
+.acct-value { flex: 1; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-act { border: 0; background: none; color: var(--indigo); font: inherit; font-size: 13px; cursor: pointer; flex-shrink: 0; }
+.acct-act:hover { text-decoration: underline; }
+
+.acct-editor { padding-top: 16px; }
+.acct-editor[hidden] { display: none; }
+.acct-editor-title { font-size: 13px; font-weight: 600; }
+.acct-editor label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 5px; }
+.acct-editor input {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--line);
+  background: var(--card); font: inherit; font-size: 14px; color: var(--ink);
+}
+.acct-editor input:focus { border-color: var(--indigo); outline: none; }
+.acct-editor-actions { display: flex; gap: 10px; margin-top: 18px; }
+.acct-msg { min-height: 18px; margin-top: 10px; font-size: 13px; }
+.acct-msg.err { color: var(--cinnabar); }
+.acct-msg.ok { color: var(--pine); }
 .session-item {
   position: relative;
   border: none;
@@ -408,5 +498,6 @@ td.down { color: var(--pine); font-weight: 600; }
   .chat-msg { max-width: 94%; }
   .chat-layout { flex-direction: column; height: auto; }
   .chat-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--line); padding: 0 0 12px; }
-  .session-list { flex-direction: row; flex-wrap: wrap; }
+  .session-list { flex-direction: row; flex-wrap: wrap; flex: none; }
+  .account-row { grid-template-columns: 1fr; }
 }

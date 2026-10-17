@@ -15,6 +15,8 @@ import os
 import urllib.error
 import urllib.request
 
+from ..observability import generation
+
 
 def _load_dotenv() -> None:
     """自动加载项目根目录或 src/ 下的 .env（不覆盖已存在的环境变量）。
@@ -97,17 +99,36 @@ def _post(
         "Authorization": f"Bearer {cfg['api_key']}",
     })
 
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        detail = e.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"LLM 请求失败 HTTP {e.code}: {detail[:500]}") from e
+    with generation(
+        "chat.completions",
+        model=cfg["model"],
+        input=messages,
+        metadata={"provider": cfg["provider"], "with_tools": bool(tools)},
+    ) as gen:
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode("utf-8", errors="replace")
+            gen.update(level="ERROR", status_message=f"HTTP {e.code}")
+            raise RuntimeError(f"LLM 请求失败 HTTP {e.code}: {detail[:500]}") from e
 
-    try:
-        return data["choices"][0]["message"]
-    except (KeyError, IndexError) as e:
-        raise RuntimeError(f"LLM 响应格式异常: {json.dumps(data, ensure_ascii=False)[:500]}") from e
+        try:
+            msg = data["choices"][0]["message"]
+        except (KeyError, IndexError) as e:
+            gen.update(level="ERROR", status_message="响应格式异常")
+            raise RuntimeError(f"LLM 响应格式异常: {json.dumps(data, ensure_ascii=False)[:500]}") from e
+
+        usage = data.get("usage") or {}
+        gen.update(
+            output=msg,
+            usage_details={
+                "input": int(usage.get("prompt_tokens") or 0),
+                "output": int(usage.get("completion_tokens") or 0),
+                "total": int(usage.get("total_tokens") or 0),
+            },
+        )
+        return msg
 
 
 def chat_raw(

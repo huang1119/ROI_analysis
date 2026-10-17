@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>评测看板 · 投放诊断</title>
+<link rel="stylesheet" href="/static/style.css?v=__V__">
+<style>
+  body { background-image: repeating-linear-gradient(to bottom, transparent 0 31px, #EDE8DE 31px 32px); }
+
+  .board-brand { display:flex; align-items:center; gap:10px; font-size:16px; font-weight:700; letter-spacing:.02em; }
+  .board-right { display:flex; align-items:center; gap:10px; }
+  .who { font-size:13px; color:var(--muted); }
+  .who b { color:var(--ink); font-weight:600; }
+  .role-tag { font-size:11px; color:var(--muted); border:1px solid var(--line); padding:1px 6px; margin-left:6px; }
+
+  .board-sub { font-size:12px; color:var(--muted); letter-spacing:.14em; margin:0 0 18px; }
+
+  .board-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px; }
+  .board-grid .card { margin-bottom:0; }
+  .board-grid + .card { margin-top:16px; }
+
+  /* 面板标题：宋体 + 一道朱砂短线（台账分节标记） */
+  .card h3 {
+    font-family:"Noto Serif SC","Songti SC","SimSun",serif;
+    font-size:15px; font-weight:700; letter-spacing:.08em;
+    padding-bottom:9px; border-bottom:1px solid var(--line);
+    position:relative; margin-bottom:14px;
+  }
+  .card h3::after { content:""; position:absolute; left:0; bottom:-1px; width:26px; height:2px; background:var(--cinnabar); }
+
+  .kpi { display:flex; align-items:baseline; gap:9px; padding-bottom:10px; }
+  .kpi b { font-size:40px; font-weight:600; line-height:1; font-variant-numeric:tabular-nums; }
+  .kpi em { font-style:normal; font-size:12px; color:var(--muted); }
+
+  /* 台账行：标签 …… 数值 */
+  .lrow { display:flex; align-items:baseline; gap:8px; padding:7px 0; }
+  .lrow .k { font-size:13px; color:var(--muted); white-space:nowrap; }
+  .lrow .lead { flex:1; border-bottom:1px dotted var(--line); transform:translateY(-3px); }
+  .lrow .v { font-size:14px; font-variant-numeric:tabular-nums; }
+  .lrow .v.danger { color:var(--cinnabar); }
+
+  .brow { display:grid; grid-template-columns:minmax(0,1fr) 62px 34px; align-items:center; gap:8px; padding:6px 0; }
+  .brow .k { font-size:13px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .brow .bar { height:6px; background:var(--indigo-soft); }
+  .brow .bar > i { display:block; height:100%; background:var(--indigo); }
+  .brow .v { text-align:right; font-size:13px; font-variant-numeric:tabular-nums; }
+
+  .new-topic-hint {
+    margin-top:14px; padding-top:12px; border-top:1px dashed var(--line);
+    font-size:12px; color:var(--muted); margin-bottom:4px;
+  }
+
+  .topic-block { padding-bottom:10px; }
+  .topic-block:last-child { padding-bottom:0; }
+  .topic-ex {
+    margin-top:4px; padding-left:10px;
+    border-left:2px solid var(--line);
+    font-size:12px; color:var(--muted); line-height:1.7;
+  }
+
+  .empty { color:var(--muted); font-size:13px; }
+  .err-msg { background:#FBEFEC; border:1px solid #E6C4BC; color:#8E2E22; padding:10px 12px; font-size:13px; margin-bottom:16px; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="board-brand">
+    <span class="seal-sm"><span>评</span><span>测</span></span>
+    评测看板
+  </div>
+  <div class="board-right">
+    <span class="who" id="who"></span>
+    <button class="btn" id="btn-refresh">刷新</button>
+    <button class="btn" id="btn-logout">退出</button>
+  </div>
+</header>
+
+<main class="container">
+  <p class="board-sub">线上监测信号聚合</p>
+  <div id="errbox"></div>
+
+  <div class="board-grid">
+    <section class="card">
+      <h3>总览</h3>
+      <div class="kpi"><b id="totalTraces">—</b><em>条 Trace</em></div>
+      <div class="lrow"><span class="k">Langfuse 连接</span><span class="lead"></span><span class="v" id="lfStatus">—</span></div>
+    </section>
+
+    <section class="card">
+      <h3>兜底触发次数</h3>
+      <div id="fallback"></div>
+    </section>
+
+    <section class="card">
+      <h3>兜底归因（话题）</h3>
+      <div id="topics"></div>
+      <div id="newTopics"></div>
+    </section>
+
+    <section class="card">
+      <h3>意图路由分布</h3>
+      <div id="routes"></div>
+    </section>
+
+    <section class="card">
+      <h3>工具调用失败</h3>
+      <div id="toolFails"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h3>最近黄金集跑批</h3>
+    <div id="experiments"></div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+}
+
+function leaderRows(container, obj, danger) {
+  const keys = Object.keys(obj || {});
+  if (!keys.length) { container.innerHTML = '<div class="empty">暂无数据</div>'; return; }
+  container.innerHTML = keys.map(k =>
+    '<div class="lrow"><span class="k">' + esc(k) + '</span><span class="lead"></span>' +
+    '<span class="v' + (danger ? " danger" : "") + '">' + esc(obj[k]) + "</span></div>"
+  ).join("");
+}
+
+function topicRows(container, counts, examples) {
+  const keys = Object.keys(counts || {});
+  if (!keys.length) { container.innerHTML = '<div class="empty">暂无数据</div>'; return; }
+  const total = keys.reduce((s, k) => s + counts[k], 0) || 1;
+  container.innerHTML = keys.map(k => {
+    const ex = (examples || {})[k] || [];
+    const exHtml = ex.length
+      ? '<div class="topic-ex">' + ex.map(d => esc(d)).join("<br>") + "</div>"
+      : "";
+    return '<div class="topic-block">' +
+      '<div class="brow"><span class="k">' + esc(k) + '</span>' +
+      '<span class="bar"><i style="width:' + (counts[k] / total * 100).toFixed(0) + '%"></i></span>' +
+      '<span class="v">' + esc(counts[k]) + "</span></div>" + exHtml + "</div>";
+  }).join("");
+}
+
+function newTopicRows(container, counts, examples) {
+  const keys = Object.keys(counts || {});
+  if (!keys.length) { container.innerHTML = ""; return; }
+  container.innerHTML = '<div class="new-topic-hint">新需求（LLM 提议，未收进词表）</div>' +
+    keys.map(k => {
+      const ex = (examples || {})[k] || [];
+      const exHtml = ex.length
+        ? '<div class="topic-ex">' + ex.map(d => esc(d)).join("<br>") + "</div>"
+        : "";
+      return '<div class="lrow"><span class="k">' + esc(k) + '</span><span class="lead"></span>' +
+        '<span class="v">' + esc(counts[k]) + "</span></div>" + exHtml;
+    }).join("");
+}
+
+function barRows(container, obj) {
+  const keys = Object.keys(obj || {});
+  if (!keys.length) { container.innerHTML = '<div class="empty">暂无数据</div>'; return; }
+  const total = keys.reduce((s, k) => s + obj[k], 0) || 1;
+  container.innerHTML = keys.map(k =>
+    '<div class="brow"><span class="k">' + esc(k) + '</span>' +
+    '<span class="bar"><i style="width:' + (obj[k] / total * 100).toFixed(0) + '%"></i></span>' +
+    '<span class="v">' + esc(obj[k]) + "</span></div>"
+  ).join("");
+}
+
+function renderSignals(s) {
+  const errbox = $("errbox");
+  if (s.error) {
+    errbox.innerHTML = '<div class="err-msg">Langfuse 拉取失败（网络问题，数据仍在 Langfuse）：' +
+      esc(String(s.error).slice(0, 300)) + "</div>";
+    $("lfStatus").textContent = "拉取失败";
+  } else {
+    errbox.innerHTML = "";
+    $("lfStatus").textContent = s.enabled ? "已连接" : "未配置";
+  }
+  $("totalTraces").textContent = s.total_traces ?? "—";
+  leaderRows($("fallback"), s.fallback_counts || {});
+  topicRows($("topics"), s.fallback_topics || {}, s.fallback_topic_examples || {});
+  newTopicRows($("newTopics"), s.new_topic_counts || {}, s.new_topic_examples || {});
+  barRows($("routes"), s.route_distribution || {});
+  leaderRows($("toolFails"), s.tool_failures || {}, true);
+}
+
+function renderExperiments(e) {
+  const el = $("experiments");
+  const rows = e.experiments || [];
+  if (!rows.length) { el.innerHTML = '<div class="empty">暂无实验记录</div>'; return; }
+  el.innerHTML = rows.map(x =>
+    '<div class="lrow"><span class="k">' + esc(x.name || "") + '</span><span class="lead"></span>' +
+    '<span class="v">' + esc(x.item_count ?? 0) + " 条 · " + esc(String(x.start_time || "").slice(0, 19)) + "</span></div>"
+  ).join("");
+}
+
+async function refresh() {
+  $("errbox").innerHTML = "";
+  try {
+    const [sr, er] = await Promise.all([fetch("/api/eval/signals"), fetch("/api/eval/experiments")]);
+    if (sr.status === 401) { location.href = "/login"; return; }
+    if (sr.status === 403) { location.href = "/"; return; }
+    renderSignals(await sr.json());
+    renderExperiments(await er.json());
+  } catch (err) {
+    $("errbox").innerHTML = '<div class="err-msg">加载失败：' + esc(err) + "</div>";
+  }
+}
+
+$("btn-refresh").addEventListener("click", refresh);
+$("btn-logout").addEventListener("click", async () => {
+  await fetch("/api/auth/logout", { method: "POST" });
+  location.href = "/login";
+});
+
+fetch("/api/auth/me").then(r => r.ok ? r.json() : null).then(u => {
+  if (!u) return;
+  $("who").innerHTML = "<b>" + esc(u.username) + "</b><span class='role-tag'>" +
+    (u.role === "developer" ? "开发者" : "普通") + "</span>";
+}).catch(() => {});
+
+refresh();
+</script>
+</body>
+</html>

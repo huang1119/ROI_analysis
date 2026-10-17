@@ -45,6 +45,7 @@ async function postJSON(url, body) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body || {}),
   });
+  if (res.status === 401) { location.href = "/login"; throw new Error("未登录"); }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || res.statusText);
@@ -248,7 +249,7 @@ $("btn-scan").addEventListener("click", async () => {
 function renderScan(anomalies) {
   const container = $("scan-result");
   if (!anomalies.length) {
-    container.innerHTML = `<div class="card">✅ 未发现异常账户</div>`;
+    container.innerHTML = `<div class="card"><span class="ok-mark">未发现异常账户</span></div>`;
     return;
   }
   container.innerHTML = anomalies.map((a) => `
@@ -503,8 +504,167 @@ $("session-list").addEventListener("dblclick", (e) => {
   });
 });
 
+// ---------------------------------------------------------------- 当前账号 / 账号管理
+function maskEmail(e) {
+  if (!e) return "";
+  const [local, domain] = e.split("@");
+  if (!domain) return e;
+  const tail = local.length > 5 ? local.slice(-2) : "";
+  return local.slice(0, 3) + "****" + tail + "@" + domain;
+}
+function maskPhone(p) {
+  return p && p.length === 11 ? p.slice(0, 3) + "****" + p.slice(-4) : (p || "");
+}
+
+let accountProfile = null;
+
+async function loadAccountDock() {
+  try {
+    const r = await fetch("/api/auth/me");
+    if (!r.ok) return;
+    const u = await r.json();
+    $("account-name").textContent = u.username;
+    $("account-role").textContent = u.role === "developer" ? "开发者" : "普通";
+    $("account-avatar").textContent = (u.username[0] || "?").toUpperCase();
+    if (u.role === "developer") $("menu-eval").classList.remove("hidden");
+    $("account-dock").hidden = false;
+  } catch (e) { /* 未登录时中间件已跳转 */ }
+}
+
+function toggleAccountMenu(open) {
+  const menu = $("account-menu");
+  const next = open === undefined ? menu.hidden : open;
+  menu.hidden = !next;
+  $("account-btn").setAttribute("aria-expanded", String(next));
+}
+
+$("account-btn").addEventListener("click", (e) => { e.stopPropagation(); toggleAccountMenu(); });
+$("account-menu").addEventListener("click", (e) => e.stopPropagation());
+document.addEventListener("click", () => toggleAccountMenu(false));
+$("menu-logout").addEventListener("click", async () => {
+  await fetch("/api/auth/logout", { method: "POST" });
+  location.href = "/login";
+});
+$("menu-account").addEventListener("click", () => { toggleAccountMenu(false); openAccountModal(); });
+
+// ---- 账号管理弹窗 ----
+async function openAccountModal() {
+  $("account-modal").hidden = false;
+  $("acct-editor").hidden = true;
+  $("acct-msg").textContent = "";
+  try {
+    accountProfile = await (await fetch("/api/account/me")).json();
+    renderAccount();
+  } catch (e) { /* ignore */ }
+}
+
+function renderAccount() {
+  const p = accountProfile || {};
+  $("acct-username").textContent = p.username || "—";
+  $("acct-email").textContent = p.email ? maskEmail(p.email) : "未绑定";
+  $("acct-phone").textContent = p.phone ? maskPhone(p.phone) : "未绑定";
+  document.querySelector('[data-act="email"]').textContent = p.email ? "修改" : "绑定";
+  document.querySelector('[data-act="phone"]').textContent = p.phone ? "修改" : "绑定";
+}
+
+function closeAccountModal() {
+  $("account-modal").hidden = true;
+  $("account-menu").hidden = true;
+}
+$("account-close").addEventListener("click", closeAccountModal);
+$("account-modal").addEventListener("click", (e) => { if (e.target === $("account-modal")) closeAccountModal(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAccountModal(); });
+
+const ACCT_ACTIONS = {
+  username: {
+    title: "修改用户名",
+    fields: [{ k: "new_username", label: "新用户名（3-20 位字母/数字/._-）", value: () => (accountProfile || {}).username || "" }],
+    url: "/api/account/username",
+    body: (v) => ({ new_username: v.new_username }),
+  },
+  email: {
+    title: "邮箱",
+    fields: [{ k: "email", label: "邮箱地址", type: "email", value: () => (accountProfile || {}).email || "" }],
+    url: "/api/account/profile",
+    body: (v) => ({ email: v.email }),
+  },
+  phone: {
+    title: "手机号",
+    fields: [{ k: "phone", label: "手机号码", value: () => (accountProfile || {}).phone || "" }],
+    url: "/api/account/profile",
+    body: (v) => ({ phone: v.phone }),
+  },
+  password: {
+    title: "修改密码",
+    fields: [
+      { k: "old_password", label: "当前密码", type: "password" },
+      { k: "new_password", label: "新密码（至少 6 位）", type: "password" },
+      { k: "confirm", label: "确认新密码", type: "password" },
+    ],
+    url: "/api/account/password",
+    body: (v) => ({ old_password: v.old_password, new_password: v.new_password }),
+  },
+};
+
+let acctAction = null;
+
+function openAcctEditor(action) {
+  acctAction = action;
+  const cfg = ACCT_ACTIONS[action];
+  $("acct-editor-title").textContent = cfg.title;
+  $("acct-editor-fields").innerHTML = cfg.fields.map((f) =>
+    '<label>' + f.label + '</label><input data-k="' + f.k + '" type="' + (f.type || "text") +
+    '" value="' + esc(f.value ? f.value() : "") + '">'
+  ).join("");
+  const msg = $("acct-msg");
+  msg.textContent = "";
+  msg.className = "acct-msg";
+  $("acct-editor").hidden = false;
+  const first = $("acct-editor-fields").querySelector("input");
+  if (first) first.focus();
+}
+
+document.querySelectorAll(".acct-act").forEach((b) =>
+  b.addEventListener("click", () => openAcctEditor(b.dataset.act)));
+$("acct-cancel").addEventListener("click", () => { $("acct-editor").hidden = true; });
+
+$("acct-save").addEventListener("click", async () => {
+  const cfg = ACCT_ACTIONS[acctAction];
+  const vals = {};
+  $("acct-editor-fields").querySelectorAll("input").forEach((i) => { vals[i.dataset.k] = i.value.trim(); });
+  const msg = $("acct-msg");
+  msg.className = "acct-msg";
+  msg.textContent = "";
+  if (acctAction === "password" && vals.new_password !== vals.confirm) {
+    msg.classList.add("err");
+    msg.textContent = "两次输入的新密码不一致。";
+    return;
+  }
+  try {
+    const r = await fetch(cfg.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cfg.body(vals)),
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.detail || "保存失败");
+    }
+    accountProfile = await (await fetch("/api/account/me")).json();
+    renderAccount();
+    $("acct-editor").hidden = true;
+    msg.classList.add("ok");
+    msg.textContent = "已保存。";
+    loadAccountDock();
+  } catch (e) {
+    msg.classList.add("err");
+    msg.textContent = e.message;
+  }
+});
+
 // ---------------------------------------------------------------- 初始化
 (async () => {
+  loadAccountDock();
   loadAccounts();
   loadExportConfig();
   await loadSessions();
@@ -578,7 +738,7 @@ function appendChatExtras(el, content, meta) {
     row.className = "chat-actions";
     const btnView = document.createElement("button");
     btnView.className = "btn btn-link";
-    btnView.textContent = "查看素材下钻详情 →";
+    btnView.textContent = "查看素材下钻详情";
     btnView.dataset.jump = meta.account_id;
     row.appendChild(btnView);
     const btnExp = document.createElement("button");
@@ -694,7 +854,7 @@ async function sendChat() {
   const s = currentSession();
   const history = s ? s.messages.slice(0, -1).map((m) => ({ role: m.role, content: m.content })) : [];
   try {
-    r = await postJSON("/api/chat", { message: msg, history });
+    r = await postJSON("/api/chat", { message: msg, history, session_id: currentSessionId });
   } catch (e) {
     thinking.remove();
     addChatMessage("agent", "抱歉，出错了：" + e.message);
@@ -720,7 +880,7 @@ $("chat-history").addEventListener("click", async (e) => {
   if (exp) {
     try {
       await exportReport(exp.content, exp.accountId);
-      e.target.textContent = "已导出 ✓";
+      e.target.textContent = "已导出";
       setTimeout(() => { e.target.textContent = "导出报告"; }, 2500);
     } catch (err) {
       e.target.textContent = "导出失败";
@@ -731,7 +891,7 @@ $("chat-history").addEventListener("click", async (e) => {
 
 function addWelcome() {
   addChatMessage("agent",
-    "你好，我是 ROI 诊断助手 👋\n\n你可以直接问我：\n\n- 「为什么美妆旗舰店的ROI下降了？」\n- 「扫描一下所有账户」\n- 「有哪些账户？」\n- 「导出报告」");
+    "你好，我是 ROI 诊断助手。\n\n你可以直接问我：\n\n- 「为什么美妆旗舰店的ROI下降了？」\n- 「扫描一下所有账户」\n- 「有哪些账户？」\n- 「导出报告」");
 }
 
 // ---------------------------------------------------------------- 导出
@@ -918,6 +1078,7 @@ function renderAccounts() {
     <div class="account-row">
       <input class="control" data-i="${i}" data-k="advertiser_id" value="${esc(a.advertiser_id)}" placeholder="广告主ID">
       <input class="control" data-i="${i}" data-k="advertiser_name" value="${esc(a.advertiser_name)}" placeholder="店铺名称">
+      <input class="control" data-i="${i}" data-k="aliases" value="${esc((a.aliases || []).join("，"))}" placeholder="别名（逗号分隔）">
       <button class="btn" data-del="${i}">删除</button>
     </div>`).join("");
 }
@@ -925,7 +1086,11 @@ function renderAccounts() {
 $("accounts-list").addEventListener("input", (e) => {
   const i = e.target.dataset.i, k = e.target.dataset.k;
   if (i === undefined || k === undefined) return;
-  accountsState[+i][k] = e.target.value;
+  if (k === "aliases") {
+    accountsState[+i].aliases = e.target.value.split(/[,，、\s]+/).map((s) => s.trim()).filter(Boolean);
+  } else {
+    accountsState[+i][k] = e.target.value;
+  }
 });
 
 $("accounts-list").addEventListener("click", (e) => {
@@ -934,7 +1099,7 @@ $("accounts-list").addEventListener("click", (e) => {
 });
 
 $("btn-add-account").addEventListener("click", () => {
-  accountsState.push({ advertiser_id: "", advertiser_name: "" });
+  accountsState.push({ advertiser_id: "", advertiser_name: "", aliases: [] });
   renderAccounts();
 });
 

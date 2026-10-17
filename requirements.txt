@@ -6,3 +6,4 @@ fastapi>=0.110
 uvicorn>=0.29
 reportlab>=4.0
 apscheduler>=3.10
+langfuse>=4.0

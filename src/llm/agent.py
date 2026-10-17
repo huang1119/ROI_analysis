@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 
+from ..observability import record_fallback, record_tool_call, span
 from .client import chat, chat_raw
 
 
@@ -38,14 +39,35 @@ def run_agent(
                 args = json.loads(fn.get("arguments") or "{}")
             except json.JSONDecodeError:
                 args = {}
-            result = execute(name, args)
+            with span(f"tool:{name}", input={"name": name, "arguments": args}, as_type="tool") as s:
+                try:
+                    result = execute(name, args)
+                    is_error = isinstance(result, dict) and "error" in result
+                    status = "error" if is_error else "ok"
+                    record_tool_call(name, args, result, status)
+                    s.update(
+                        output=result,
+                        metadata={"tool": name, "status": status},
+                        level="ERROR" if is_error else None,
+                        status_message=str(result.get("error")) if is_error else None,
+                    )
+                except Exception as e:  # noqa: BLE001
+                    result = {"error": str(e)}
+                    record_tool_call(name, args, result, "error")
+                    s.update(
+                        output=result,
+                        metadata={"tool": name, "status": "error"},
+                        level="ERROR",
+                        status_message=str(e),
+                    )
             messages.append({
                 "role": "tool",
                 "tool_call_id": tc.get("id", ""),
                 "content": json.dumps(result, ensure_ascii=False, default=str),
             })
 
-    # 达到最大轮次仍未给出结论，强制要求总结
+    # 达到最大轮次仍未给出结论，强制要求总结（显式兜底分支）
+    record_fallback("deterministic_fallback")
     messages.append({
         "role": "user",
         "content": "请基于以上查证结果，直接给出最终诊断报告，不要再调用工具。",
